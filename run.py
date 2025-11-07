@@ -28,8 +28,9 @@ def train(network, opt):
             pretrained_filename = opt.output_fullname.split('/')[-1] + '.pth'
             pretrained_dir = './model_weights'
             pretrained_path = os.path.join(pretrained_dir, pretrained_filename)
-            assert os.path.exists(pretrained_path), "Pretrained weight does not exist. Please check. \n" \
-                                                    "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
+            assert os.path.exists(pretrained_path), \
+                "Pretrained weight does not exist. Please check. \n" \
+                "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
             network.load_state_dict(torch.load(pretrained_path))
     else:
         if opt.pretrained_weight:
@@ -89,7 +90,7 @@ def train(network, opt):
                 input1, target1, meta1 = I1
                 input2, target2, meta2 = I2
                 predicted = network(input2.type(Tensor), input1.type(Tensor),
-                                    meta = [meta2.type(Tensor), meta1.type(Tensor)])
+                                    meta=[meta2.type(Tensor), meta1.type(Tensor)])
 
             else:
                 I1, I2 = batch
@@ -130,8 +131,7 @@ def train(network, opt):
             )
             epoch_step_time.append(time.time() - step_start_time)
 
-        if ((epoch + 1) % steps_per_epoch == 0):  # (step != 0) &
-            # print epoch info
+        if (epoch + 1) % steps_per_epoch == 0:
             epoch_info = '\nValidating... Step %d/%d / Epoch %d/%d' % (
                 step, len(loader_train), epoch, opt.max_epoch)
             time_info = '%.4f sec/step' % np.mean(epoch_step_time)
@@ -147,7 +147,7 @@ def train(network, opt):
                     input1, target1, meta1 = I1
                     input2, target2, meta2 = I2
                     predicted = network(input2.type(Tensor), input1.type(Tensor),
-                                        meta = [meta2.type(Tensor), meta1.type(Tensor)])
+                                        meta=[meta2.type(Tensor), meta1.type(Tensor)])
 
                 else:
                     I1, I2 = batch
@@ -173,7 +173,7 @@ def train(network, opt):
                            f"{opt.output_fullname}/model_best.pth")
                 np.savetxt(f"{opt.output_fullname}/model_best.info", np.array([epoch]))
                 prev_val_loss = curr_val_loss
-                earlystoppingcount = 0  # New bottom
+                earlystoppingcount = 0
             else:
                 earlystoppingcount += 1
                 print(f'Early stopping count: {earlystoppingcount}')
@@ -184,7 +184,7 @@ def train(network, opt):
     network.eval()
 
 
-def test(network,opt, overwrite = False):
+def test(network, opt, overwrite=False):
     import sklearn.metrics as metrics
     from scipy.stats import pearsonr
     sigmoid = nn.Sigmoid()
@@ -214,10 +214,12 @@ def test(network,opt, overwrite = False):
             if dtm == 'auc' and args.task_option == 'o':
                 print(f'warning: {dtm.upper()} calculated only for binary pairs')
                 feature_diff_auc = sigmoid(torch.tensor(feature_diff)).numpy()
-                print(f'{dtm.upper()}: {dict_metric[dtm](target_diff[target_diff != 0.5], feature_diff_auc[target_diff != 0.5]):.3}')
+                print(
+                    f'{dtm.upper()}: {dict_metric[dtm](target_diff[target_diff != 0.5], feature_diff_auc[target_diff != 0.5]):.3}')
             else:
                 if dtm == 'loss':
-                    print(f'{dtm.upper()}: {opt.loss(torch.tensor(feature_diff), torch.tensor(target_diff)).item():.3f}')
+                    print(
+                        f'{dtm.upper()}: {opt.loss(torch.tensor(feature_diff), torch.tensor(target_diff)).item():.3f}')
                 else:
                     print(f'{dtm.upper()}: {dict_metric[dtm](target_diff, feature_diff):.3f}')
 
@@ -239,7 +241,7 @@ def test(network,opt, overwrite = False):
                 pretrained_path = os.path.join(pretrained_dir, pretrained_filename)
                 print(pretrained_path)
                 assert os.path.exists(pretrained_path), "Pretrained weight does not exist. Please check.\n" \
-                                                    "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
+                                                        "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
                 network.load_state_dict(torch.load(pretrained_path))
             else:
                 network.load_state_dict(torch.load(savedmodelname))
@@ -251,7 +253,7 @@ def test(network,opt, overwrite = False):
                 pretrained_dir = './model_weights'
                 pretrained_path = os.path.join(pretrained_dir, pretrained_filename)
                 assert os.path.exists(pretrained_path), "Pretrained weight does not exist. Please check.\n" \
-                                                    "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
+                                                        "Download: wget https://zenodo.org/records/14713287/files/lilac_model_weights.tar.gz"
                 state_dict = torch.load(pretrained_path)
                 # remap to handle w/o DataParallel:  a new state_dict by removing 'module.' prefix
                 new_state_dict = {}
@@ -268,7 +270,6 @@ def test(network,opt, overwrite = False):
 
             if cuda:
                 network = network.cuda()
-
 
         network.eval()
 
@@ -298,7 +299,7 @@ def test(network,opt, overwrite = False):
                 input1, target1, meta1 = I1
                 input2, target2, meta2 = I2
                 predicted = network(input2.type(Tensor), input1.type(Tensor),
-                                    meta = [meta2.type(Tensor), meta1.type(Tensor)])
+                                    meta=[meta2.type(Tensor), meta1.type(Tensor)])
 
             else:
                 I1, I2 = batch
@@ -309,17 +310,13 @@ def test(network,opt, overwrite = False):
             targetdiff = (target2 - target1)[:, None].type(Tensor)
             if opt.task_option == 'o':
                 targetdiff[targetdiff > 0] = 1
-                targetdiff[targetdiff == 0] = 0.5
+                # targetdiff[targetdiff == 0] = 0.5
                 targetdiff[targetdiff < 0] = 0
 
-            tmp_stack_predicted = np.append(tmp_stack_predicted,
-                                            np.array((predicted).cpu().detach()),
-                                            axis=0)
-            tmp_stack_target = np.append(tmp_stack_target,
-                                         targetdiff.cpu().detach(), axis=0)
+            tmp_stack_predicted = np.append(tmp_stack_predicted, np.array((predicted).cpu().detach()), axis=0)
+            tmp_stack_target = np.append(tmp_stack_target, targetdiff.cpu().detach(), axis=0)
             tmp_stack_target1 = np.append(tmp_stack_target1, np.array(target1)[:, None], axis=0)
             tmp_stack_target2 = np.append(tmp_stack_target2, np.array(target2)[:, None], axis=0)
-
 
         result['target'] = tmp_stack_target
         result['predicted'] = tmp_stack_predicted
@@ -336,10 +333,12 @@ def test(network,opt, overwrite = False):
             if dtm == 'auc' and args.task_option == 'o':
                 print(f'warning: {dtm.upper()} calculated only for binary pairs')
                 feature_diff_auc = sigmoid(torch.tensor(feature_diff)).numpy()
-                print(f'{dtm.upper()}: {dict_metric[dtm](target_diff[target_diff != 0.5], feature_diff_auc[target_diff != 0.5]):.3}')
+                print(
+                    f'{dtm.upper()}: {dict_metric[dtm](target_diff[target_diff != 0.5], feature_diff_auc[target_diff != 0.5]):.3}')
             else:
                 if dtm == 'loss':
-                    print(f'{dtm.upper()}: {opt.loss(torch.tensor(feature_diff), torch.tensor(target_diff)).item():.3f}')
+                    print(
+                        f'{dtm.upper()}: {opt.loss(torch.tensor(feature_diff), torch.tensor(target_diff)).item():.3f}')
                 else:
                     print(f'{dtm.upper()}: {dict_metric[dtm](target_diff, feature_diff)}:.3f')
 
@@ -358,7 +357,8 @@ def parse_args():
     parser.add_argument('--epoch', default=0, type=int, help="starting epoch")
     parser.add_argument('--save_epoch_num', default=1, type=int, help="validate and save every N epoch")
 
-    parser.add_argument('--image_directory', default='./datasets', type=str)  # , required=True)
+    parser.add_argument('--image_directory',
+                        default='/mnt/lustre/work/ritter/rvy096/APICES_stroke/prep_ct_files', type=str)
     parser.add_argument('--csv_file_train', default='./datasets/demo_oasis_train.csv', type=str,
                         help="csv file for training set")  # , required=True)
     parser.add_argument('--csv_file_val', default='./datasets/demo_oasis_val.csv', type=str,
@@ -376,7 +376,8 @@ def parse_args():
                                        "s: regression with optional meta for a 's'pecific target variable\n ")
     parser.add_argument('--targetname', default='age', type=str)
     parser.add_argument('--optional_meta', default='', type=str,
-                        help='list optional meta names to be used (e.g., ["AGE", "AGE_x_SEX"]). csv files should include the meta data name')
+                        help='list optional meta names to be used (e.g., ["AGE", "AGE_x_SEX"]). csv files should '
+                             'include the meta data name')
     parser.add_argument('--backbone_name', default='cnn_3D', type=str,
                         help="implemented models: cnn_3D, cnn_2D, resnet50_2D, resnet18_2D")
 
@@ -405,10 +406,9 @@ def run_setup(args):
             args.batchsize)
     else:
         path_pref = args.jobname + '-' + dict_task[args.task_option] + '-' + 'meta' + '_' + \
-            args.optional_meta + '-' + \
+                    args.optional_meta + '-' + \
                     'backbone_' + args.backbone_name + '-lr' + str(args.lr) + '-seed' + str(args.seed) + '-batch' + str(
             args.batchsize)
-
 
     args.output_fullname = os.path.join(args.output_directory, path_pref)
     os.makedirs(args.output_fullname, exist_ok=True)
@@ -432,7 +432,7 @@ def run_setup(args):
     if len(args.optional_meta) > 0 and ',' in args.optional_meta:
         optiona_meta_names = [item for item in args.optional_meta.split(',')]
         args.optional_meta = optiona_meta_names
-    elif len(args.optional_meta) > 0 and not(',' in args.optional_meta):
+    elif len(args.optional_meta) > 0 and not (',' in args.optional_meta):
         args.optional_meta = [args.optional_meta]
     else:
         args.optional_meta = []
@@ -454,14 +454,13 @@ def run_setup(args):
 
     print(' ----------------- Run Setup Summary -----------------')
     print(f'JOB NAME: {args.jobname}')
-    print(f'TASK: {dict_task[args.task_option] }')
+    print(f'TASK: {dict_task[args.task_option]}')
     print(f'Target Attribute: {args.targetname}')
-    if len(args.optional_meta)>0:
+    if len(args.optional_meta) > 0:
         print(f'Optional Meta: {args.optional_meta}')
     print(f'BACKBONE: {args.backbone_name}')
     print(f'RUN MODE: {args.run_mode}')
     print(f"Num of GPUs: {torch.cuda.device_count()}")
-
 
 
 if __name__ == "__main__":
@@ -480,4 +479,3 @@ if __name__ == "__main__":
         assert args.run_mode == 'train', "check run_mode"
         print(' ----------------- Training initiated -----------------')
         train(model, args)
-
