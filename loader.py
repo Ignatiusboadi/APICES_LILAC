@@ -21,78 +21,7 @@ dict_transform = {'embryo': transforms.Compose([
                                                      interpolation=InterpolationMode.BILINEAR),
                              transforms.RandomHorizontalFlip(p=1),
                              transforms.RandomVerticalFlip(p=1)]), p=0.5)
-
-
     ])}
-
-
-class loader2D(Dataset):
-    def __init__(self, args, trainvaltest='train'):
-
-        if trainvaltest == 'train':
-            self.demo = pd.read_csv(args.csv_file_train, index_col=0)
-            self.augmentation = True
-            assert set(['fname', 'subject', args.targetname]).issubset(
-                set(list(self.demo.columns))), f"Check input csv file column names"
-        elif trainvaltest == 'val':
-            self.demo = pd.read_csv(args.csv_file_val, index_col=0)
-            self.augmentation = False
-            assert set(['fname', 'subject', args.targetname]).issubset(
-                set(list(self.demo.columns))), f"Check input csv file column names"
-        else:
-            self.demo = pd.read_csv(args.csv_file_test, index_col=0)
-            self.augmentation = False
-            assert set(['fname', 'subject', args.targetname]).issubset(
-                set(list(self.demo.columns))), f"Check input csv file column names"
-
-        # image directory
-        IDunq = np.unique(self.demo['subject'])
-        index_combination = np.empty((0, 2))
-        for sid in IDunq:
-            indices = np.where(self.demo['subject'] == sid)[0]
-            ### all possible pairs
-            tmp_combination = np.array(
-                np.meshgrid(np.array(range(len(indices))), np.array(range(len(indices))))).T.reshape(-1, 2)
-            index_combination = np.append(index_combination, indices[tmp_combination], 0)
-
-        img_height, img_width = args.image_size
-        self.targetname = args.targetname
-        self.imgdir = args.image_directory
-
-        self.resize = transforms.Compose([
-            transforms.Resize((img_height, img_width), InterpolationMode.BILINEAR),
-            transforms.ToTensor(),
-        ])
-        self.index_combination = index_combination
-
-        if self.augmentation:
-            if args.jobname in dict_transform.keys():
-                self.transform = dict_transform[args.jobname]
-            else:
-                self.transform = transforms.Compose([
-                    transforms.RandomApply(torch.nn.ModuleList(
-                        [transforms.RandomAffine(degrees=(-10, 10), translate=(0.05, 0.05),
-                                                 interpolation=InterpolationMode.BILINEAR)]),
-                        p=0.5),
-                ])
-
-    def __getitem__(self, index):
-        index1, index2 = self.index_combination[index]
-        target1, target2 = self.demo[self.targetname][index1], self.demo[self.targetname][index2]
-
-        img1 = Image.open(os.path.join(self.imgdir, self.demo.fname[index1]))
-        img1 = self.resize(img1)  # to tensor
-        img2 = Image.open(os.path.join(self.imgdir, self.demo.fname[index2]))
-        img2 = self.resize(img2)  # to tensor
-
-        if self.augmentation:
-            img1 = self.transform(img1)
-            img2 = self.transform(img2)
-
-        return [np.array(img1), target1], [np.array(img2), target2]
-
-    def __len__(self):
-        return len(self.index_combination)
 
 
 class loader3D(Dataset):
@@ -101,35 +30,41 @@ class loader3D(Dataset):
         if trainvaltest == 'train':
             self.demo = pd.read_csv(args.csv_file_train, index_col=0)
             self.augmentation = True
-            assert set(['fname', 'subject', args.targetname]).issubset(
+            assert {'fname', 'subject', args.targetname}.issubset(
                 set(list(self.demo.columns))), f"Check input csv file column names"
         elif trainvaltest == 'val':
             self.demo = pd.read_csv(args.csv_file_val, index_col=0)
             self.augmentation = False
 
-            assert set(['fname', 'subject', args.targetname]).issubset(
+            assert {'fname', 'subject', args.targetname}.issubset(
                 set(list(self.demo.columns))), f"Check input csv file column names"
         else:
             self.demo = pd.read_csv(args.csv_file_test, index_col=0)
             self.augmentation = False
-            assert set(['fname', 'subject', args.targetname]).issubset(
+            assert {'fname', 'subject', args.targetname}.issubset(
                 set(list(self.demo.columns))), f"Check input csv file column names"
 
         self.jobname = args.jobname
         # Filter NaN values
-        nan_indices = np.concatenate([np.where(np.isnan(self.demo[k]))[0] for k in [args.targetname] + args.optional_meta])
-        if nan_indices.size>0:
-            self.demo = self.demo.drop(index = nan_indices).reset_index(drop=True)
+        nan_indices = np.concatenate(
+            [np.where(np.isnan(self.demo[k]))[0] for k in [args.targetname] + args.optional_meta])
+        if nan_indices.size > 0:
+            self.demo = self.demo.drop(index=nan_indices).reset_index(drop=True)
 
         # image directory
         IDunq = np.unique(self.demo['subject'])
-        index_combination = np.empty((0, 2))
+        index_combination = np.empty((0, 2), dtype=int)
+
         for sid in IDunq:
             indices = np.where(self.demo['subject'] == sid)[0]
-            ### all possible pairs
+
             tmp_combination = np.array(
-                np.meshgrid(np.array(range(len(indices))), np.array(range(len(indices))))).T.reshape(-1, 2)
-            index_combination = np.append(index_combination, indices[tmp_combination], 0)
+                np.meshgrid(np.arange(len(indices)), np.arange(len(indices)))
+            ).T.reshape(-1, 2)
+
+            tmp_combination = tmp_combination[tmp_combination[:, 0] != tmp_combination[:, 1]]
+
+            index_combination = np.append(index_combination, indices[tmp_combination], axis=0)
 
         self.image_size = args.image_size
         # TODO self.fnames = np.array('I' + meta.IMAGEUID.astype('int').astype('str') + '_mni_norm.nii.gz')
@@ -138,7 +73,7 @@ class loader3D(Dataset):
         self.imgdir = args.image_directory
         self.index_combination = index_combination
 
-        if len(args.optional_meta)>0:
+        if len(args.optional_meta) > 0:
             self.optional_meta = np.array(self.demo[args.optional_meta])
         else:
             self.optional_meta = ''
@@ -166,12 +101,11 @@ class loader3D(Dataset):
 
             if np.random.randint(0, 2):
 
-                if not self.jobname == 'oasis-aging':# oasis-aging dataset w/o affine transform
+                if not self.jobname == 'oasis-aging':
                     if np.random.randint(0, 2):
                         affine_degree = tuple(np.random.uniform(low=-40, high=40, size=3))
                         affine_translate = tuple(np.random.uniform(low=-10, high=10, size=3))
-                        pairwise_transform_list.append(tio.Affine(scales=(1, 1, 1),
-                                                                  degrees=affine_degree,
+                        pairwise_transform_list.append(tio.Affine(scales=(1, 1, 1), degrees=affine_degree,
                                                                   translation=affine_translate,
                                                                   image_interpolation='linear',
                                                                   default_pad_value='minimum'))
@@ -203,13 +137,11 @@ class loader3D(Dataset):
 
         if len(self.optional_meta) > 0:
             return [image1, target1, meta1], \
-                   [image2, target2, meta2]
+                [image2, target2, meta2]
 
         else:
             return [image1, target1], \
-                   [image2, target2]
+                [image2, target2]
 
     def __len__(self):
         return len(self.index_combination)
-
-
