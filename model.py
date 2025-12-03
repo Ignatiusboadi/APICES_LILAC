@@ -86,7 +86,7 @@ class CNNbasic3D(nn.Module):
 
 
 def get_backbone(args=None):
-    assert args is None, 'arguments are required for network configurations'
+    assert args is not None, 'arguments are required for network configurations'
     # TODO args.optional_meta type should be list
     n_of_meta = len(args.optional_meta)
 

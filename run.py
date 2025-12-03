@@ -10,6 +10,7 @@ import numpy as np
 import os
 import time
 import datetime
+import logging
 import torch.nn as nn
 import pandas as pd
 
@@ -54,7 +55,7 @@ def train(network, opt):
             lastpointname = glob.glob(f"{opt.output_fullname}/epoch{opt.epoch - 1}*.pth")[0]
             network.load_state_dict(torch.load(lastpointname))
         else:
-            bestepoch = np.loadtxt(os.path.join(f'' + opt.output_fullname, 'best.info'))
+            bestepoch = np.loadtxt(os.path.join(f'' + opt.output_fullname, 'model_best.info'))
             bestpointname = glob.glob(f"{opt.output_fullname}/model_best.pth")[0]
             network.load_state_dict(torch.load(bestpointname))
             opt.epoch = int(bestepoch)
@@ -101,7 +102,7 @@ def train(network, opt):
             targetdiff = (target2 - target1)[:, None].type(Tensor)
             if opt.task_option == 'o':
                 targetdiff[targetdiff > 0] = 1
-                targetdiff[targetdiff == 0] = 0.5
+                # targetdiff[targetdiff == 0] = 0.5
                 targetdiff[targetdiff < 0] = 0
 
             # Loss
@@ -158,7 +159,7 @@ def train(network, opt):
                 targetdiff = (target2 - target1)[:, None].type(Tensor)
                 if opt.task_option == 'o':
                     targetdiff[targetdiff > 0] = 1
-                    targetdiff[targetdiff == 0] = 0.5
+                    # targetdiff[targetdiff == 0] = 0.5
                     targetdiff[targetdiff < 0] = 0
 
                 valloss = args.loss(predicted, targetdiff)
@@ -466,6 +467,7 @@ def run_setup(args):
 if __name__ == "__main__":
 
     args = parse_args()
+    print(args)
     run_setup(args)
 
     model = LILAC(args)
